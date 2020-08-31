@@ -1,0 +1,5 @@
+bluez-alsa (3.0.0-1) experimental; urgency=medium
+
+  * Initial release (Closes: #969302).
+
+ -- Nobuhiro Iwamatsu <iwamatsu@debian.org>  Mon, 31 Aug 2020 13:45:07 +0900
