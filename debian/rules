@@ -7,12 +7,10 @@ LDFLAGS=$(shell dpkg-buildflags --get LDFLAGS)
 LDFLAGS+=-Wl,-z,defs -Wl,--as-needed
 
 CONFIGURE_FLAGS := \
-	--enable-ldac \
+	--enable-aac \
 	--enable-ofono \
 	--enable-manpages \
 	--enable-debug
-# fdk-aac (libfdk-aac-dev) is in non-free
-#	--enable-aac
 
 %:
 	dh $@ --exclude=.la
