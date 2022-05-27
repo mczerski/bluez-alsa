@@ -1,3 +1,9 @@
+bluez-alsa (4.0.0-1) experimental; urgency=medium
+
+  * update to upstream v4.0.0 release.
+
+ -- Marek Czerski <ma.czerski@gmail.com> Tue, 14 Jun 2022 01:24:09 +0200
+
 bluez-alsa (3.0.0-1) experimental; urgency=medium
 
   * Initial release (Closes: #969302).
