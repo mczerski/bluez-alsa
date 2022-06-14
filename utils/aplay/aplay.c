@@ -313,36 +313,33 @@ static int pcm_worker_mixer_volume_sync(
 		return 0;
 
 	const int vmax = BA_PCM_VOLUME_MAX(ba_pcm);
-	long long volume_db_sum = 0;
+	long long volume_sum = 0;
 	bool muted = true;
 
 	snd_mixer_selem_channel_id_t ch;
 	for (ch = 0; snd_mixer_selem_has_playback_channel(elem, ch) == 1; ch++) {
 
-		long ch_volume_db;
-		int ch_switch;
+		long ch_volume;
+		long ch_min;
+		long ch_max;
+		int ch_switch = 1;
 
 		int err;
-		if ((err = snd_mixer_selem_get_playback_dB(elem, 0, &ch_volume_db)) != 0 ||
-				(err = snd_mixer_selem_get_playback_switch(elem, 0, &ch_switch)) != 0) {
+		if ((err = snd_mixer_selem_get_playback_volume_range(elem, &ch_min, &ch_max)) != 0) {
+			error("Couldn't get playback volume range: %s", snd_strerror(err));
+			return -1;
+		}
+		if ((err = snd_mixer_selem_get_playback_volume(elem, 0, &ch_volume)) != 0) {
 			error("Couldn't get playback volume: %s", snd_strerror(err));
 			return -1;
 		}
-
-		volume_db_sum += ch_volume_db;
+		snd_mixer_selem_get_playback_switch(elem, 0, &ch_switch);
+		volume_sum += lround(vmax * (ch_volume - ch_min) / ch_max);
 		if (ch_switch == 1)
 			muted = false;
-
 	}
 
-	/* Safety check for undefined behavior from
-	 * out-of-bounds dB conversion. */
-	assert(volume_db_sum <= 0LL);
-
-	/* Convert dB to loudness using decibel formula and
-	 * round to the nearest integer. */
-	int volume = lround(pow(2, (0.01 * volume_db_sum / ch) / 10) * vmax);
-
+	int volume = lround(volume_sum / ch);
 	ba_pcm->volume.ch1_muted = muted;
 	ba_pcm->volume.ch1_volume = volume;
 	ba_pcm->volume.ch2_muted = muted;
@@ -388,15 +385,20 @@ static int pcm_worker_mixer_volume_update(
 		muted = ba_pcm->volume.ch1_muted || ba_pcm->volume.ch2_muted;
 	}
 
-	/* convert loudness to dB using decibel formula */
-	long db = 10 * log2(1.0 * volume / vmax) * 100;
-
+	long max;
+	long min;
 	int err;
-	if ((err = snd_mixer_selem_set_playback_dB_all(elem, db, 0)) != 0 ||
-			(err = snd_mixer_selem_set_playback_switch_all(elem, !muted)) != 0) {
+	if ((err = snd_mixer_selem_get_playback_volume_range(elem, &min, &max)) != 0) {
+		error("Couldn't get playback volume range: %s", snd_strerror(err));
+		return -1;
+	}
+	volume = lround((max - min) * volume / vmax) + min;
+	if ((err = snd_mixer_selem_set_playback_volume_all(elem, volume)) != 0) {
 		error("Couldn't set playback volume: %s", snd_strerror(err));
 		return -1;
 	}
+
+	snd_mixer_selem_set_playback_switch_all(elem, !muted);
 
 	return 0;
 }
